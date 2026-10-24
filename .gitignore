@@ -1,0 +1,10 @@
+.env
+/storage/logs/*
+/storage/private/*
+/storage/backups/*
+/storage/installed.lock
+!/storage/**/.gitkeep
+!/storage/.htaccess
+.DS_Store
+.idea/
+.vscode/

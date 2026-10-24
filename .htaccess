@@ -1,0 +1,23 @@
+# Lake View CRM — root rewrite: everything is served through public/.
+# app/, storage/, database/, .env etc. are never reachable directly.
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Optional: force HTTPS (uncomment in production)
+    # RewriteCond %{HTTPS} !=on
+    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Block dotfiles everywhere (.env, .git ...) except .well-known
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+    # Route into public/ (only once)
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<FilesMatch "^\.|\.(env|sql|log|lock|md|ini|sh|bak|json)$">
+    Require all denied
+</FilesMatch>

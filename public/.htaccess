@@ -1,0 +1,26 @@
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# Only the front controller may execute PHP
+<FilesMatch "\.(php|phtml|phar|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>
+<Files "index.php">
+    Require all granted
+</Files>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    <FilesMatch "\.(css|js|woff2?|png|jpe?g|svg|webp|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
