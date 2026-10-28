@@ -1,4 +1,25 @@
-<div class="table-responsive"><table class="table table-hover">
+<div class="m-list d-md-none">
+  <?php foreach ($p['rows'] as $s): ?>
+    <div class="m-item">
+      <a href="<?= url('/sales/' . $s['id']) ?>" class="m-main">
+        <span class="avatar m-icon"><i class="bi bi-cart-check"></i></span>
+        <span class="m-body">
+          <span class="m-title"><?= e($s['customer_name']) ?></span>
+          <span class="m-sub"><i class="bi bi-hash"></i><?= e($s['sale_number']) ?> · <?= e(fdate($s['sale_date'])) ?></span>
+          <span class="m-sub"><i class="bi bi-building"></i><?= (int) $s['shares'] ?> shares · <?= e($s['package_name'] ?? 'Per share') ?></span>
+          <?php if ($s['director_id']): ?><span class="m-sub"><i class="bi bi-person-up"></i>via <?= e($s['director_name']) ?></span><?php endif; ?>
+        </span>
+        <span class="m-side">
+          <span class="m-amount"><?= money($s['grand_total']) ?></span>
+          <?php if ((float) $s['due_amount'] > 0): ?><span class="m-meta text-danger">Due <?= money($s['due_amount']) ?></span><?php endif; ?>
+          <?= status_badge($s['status']) ?>
+        </span>
+      </a>
+    </div>
+  <?php endforeach; ?>
+  <?php if (!$p['rows']): ?><div class="empty"><i class="bi bi-cart"></i>No sales found.</div><?php endif; ?>
+</div>
+<div class="table-responsive d-none d-md-block"><table class="table table-hover">
   <thead><tr><th><?= sort_link('number', 'Sale') ?></th><th><?= sort_link('date', 'Date') ?></th><th>Customer</th><th>Project / Package</th><th class="text-end"><?= sort_link('shares', 'Shares') ?></th><th class="text-end"><?= sort_link('total', 'Total') ?></th><th class="text-end">Due</th><th>Status</th></tr></thead>
   <tbody>
   <?php foreach ($p['rows'] as $s): ?>

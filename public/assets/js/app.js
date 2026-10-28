@@ -192,18 +192,30 @@
   });
 
   /* ---------- show a block only while a field has a value: data-show-when="name=value" ("name" alone = any value) ---------- */
-  document.querySelectorAll('[data-show-when]').forEach(el => {
+  $$('[data-show-when]').forEach(el => {
     const [name, want] = el.dataset.showWhen.split('=');
     const form = el.closest('form');
+    if (!form) return;
     const box = el.matches('select, input, textarea') ? el.closest('[class*="col"]') || el : el;
     const sync = () => {
-      const fields = form.querySelectorAll(`[name="${name}"]`);
       let val = '';
-      fields.forEach(f => { if ((f.type !== 'radio' && f.type !== 'checkbox') || f.checked) val = f.value; });
+      form.querySelectorAll(`[name="${name}"]`).forEach(f => { if ((f.type !== 'radio' && f.type !== 'checkbox') || f.checked) val = f.value; });
       box.classList.toggle('d-none', want === undefined ? val === '' : val !== want);
     };
     form.addEventListener('change', sync);
+    form.addEventListener('input', sync);
     sync();
+  });
+
+  /* ---------- number stepper: <div class="input-group"><button data-step="-1">…<input type=number>… ---------- */
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-step]');
+    if (!b) return;
+    const input = b.parentElement.querySelector('input[type="number"]');
+    if (!input) return;
+    const min = input.min === '' ? -Infinity : Number(input.min);
+    input.value = Math.max(min, (parseInt(input.value || '0', 10) || 0) + Number(b.dataset.step));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
   /* ---------- share sale / offer calculator ---------- */
@@ -212,12 +224,42 @@
     const f = n => calcForm.querySelector(`[name="${n}"]`);
     const project = f('project_id'), pkg = f('package_id'), qty = f('quantity');
     const info = $('#share-availability');
+    const cards = $('#pkg-cards');
     let proj = null;
     const feeOverride = calcForm.dataset.feeOverride === '1';
+    const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+
+    // Sale type "Direct" clears the referral fields so they are never submitted by accident.
+    calcForm.addEventListener('change', e => {
+      if (e.target.name === 'sale_type' && e.target.value === 'direct') {
+        if (f('director_id')) f('director_id').value = '';
+        if (f('customer_unit_price')) f('customer_unit_price').value = '';
+        recalc();
+      }
+    });
+
+    function renderCards() {
+      if (!cards) return;
+      cards.innerHTML = '';
+      if (!proj) { cards.innerHTML = '<div class="text-muted small">Select a project to see its packages.</div>'; return; }
+      const opts = [{ id: '', name: 'Per share', note: 'Any number of shares', price: proj.share_price }]
+        .concat(proj.packages.map(p => ({ id: String(p.id), name: p.name, note: `${p.shares_count} share${p.shares_count > 1 ? 's' : ''}`, price: p.price })));
+      opts.forEach(o => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'pkg-card' + (String(pkg.value) === o.id ? ' active' : '');
+        b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(pkg.value) === o.id ? 'true' : 'false');
+        b.innerHTML = '<span class="pkg-name"></span><span class="pkg-note"></span><span class="pkg-price"></span>';
+        b.querySelector('.pkg-name').textContent = o.name;
+        b.querySelector('.pkg-note').textContent = o.note;
+        b.querySelector('.pkg-price').textContent = money(cents(o.price));
+        b.addEventListener('click', () => { pkg.value = o.id; pkg.dispatchEvent(new Event('change', { bubbles: true })); });
+        cards.appendChild(b);
+      });
+    }
 
     async function loadProject() {
       proj = null;
-      if (!project.value) { pkg.innerHTML = '<option value="">— none (per share) —</option>'; recalc(); return; }
+      if (!project.value) { pkg.innerHTML = '<option value="">— none (per share) —</option>'; if (info) info.innerHTML = ''; renderCards(); recalc(); return; }
       const res = await api(BASE + '/api/projects/' + encodeURIComponent(project.value) + '/shares');
       if (!res.ok) return;
       proj = await res.json();
@@ -226,41 +268,59 @@
       proj.packages.forEach(p => {
         const o = document.createElement('option');
         o.value = p.id; o.textContent = `${p.name} (${p.shares_count} shares @ ${money(cents(p.price))})`;
-        o.dataset.shares = p.shares_count; o.dataset.price = p.price;
+        o.dataset.shares = p.shares_count; o.dataset.price = p.price; o.dataset.name = p.name;
         if (String(p.id) === String(keep)) o.selected = true;
         pkg.appendChild(o);
       });
+      // Most sales use a package: preselect the only/first one on a fresh form.
+      if (!keep && cards && proj.packages.length) pkg.value = String(proj.packages[0].id);
       pkg.dataset.selected = '';
       if (info) info.innerHTML = `<span class="badge text-bg-success">${proj.available} available</span> <span class="text-muted small">of ${proj.total} · ${proj.sold} sold · ${proj.reserved} reserved</span>`;
+      renderCards();
       recalc(true);
     }
     function recalc(fromProject) {
       const opt = pkg.selectedOptions[0];
       const q = Math.max(0, parseInt(qty.value || '0', 10));
       let shares = q, unit = proj ? cents(proj.share_price) : cents(f('unit_price').value);
-      if (opt && opt.value) { shares = q * parseInt(opt.dataset.shares, 10); unit = cents(opt.dataset.price); }
+      const isPkg = opt && opt.value;
+      if (isPkg) { shares = q * parseInt(opt.dataset.shares, 10); unit = cents(opt.dataset.price); }
       if (proj) f('unit_price').value = plain(unit);
       const sub = unit * q;
       if (proj && (!feeOverride || fromProject === true)) {
         f('registration_fee').value = plain(cents(proj.registration_fee) * shares);
         f('development_fee').value = plain(cents(proj.development_fee) * shares);
       }
-      const total = sub - cents(f('discount').value) + cents(f('registration_fee').value) + cents(f('development_fee').value) + cents(f('other_fee').value);
-      const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
-      set('#calc-shares', shares); set('#calc-subtotal', money(sub)); set('#calc-total', money(total));
-      const paid = f('initial_payment'); if (paid) set('#calc-due', money(total - cents(paid.value)));
+      const disc = cents(f('discount').value);
+      const fees = cents(f('registration_fee').value) + cents(f('development_fee').value) + cents(f('other_fee').value);
+      const total = sub - disc + fees;
+      set('#calc-shares', shares); set('#calc-subtotal', money(sub)); set('#calc-total', money(total)); set('#bar-total', money(total));
+      set('#sum-discount', disc ? '−' + money(disc) : '0.00'); set('#sum-fees', money(fees));
+      if (proj) {
+        set('#sum-item', proj.project_name || (project.selectedOptions[0] || {}).textContent || '');
+        set('#sum-line', `${isPkg ? opt.dataset.name : 'Per share'} · ${q} × ${money(unit)}`);
+      } else { set('#sum-item', 'No project selected'); set('#sum-line', '—'); }
+      set('#qty-help', isPkg ? `Number of "${opt.dataset.name}" packages (${shares} share${shares === 1 ? '' : 's'})` : 'Number of shares');
+      const paid = f('initial_payment');
+      if (paid) { set('#sum-paid', money(cents(paid.value))); set('#calc-due', money(total - cents(paid.value))); }
       const custUnit = f('customer_unit_price');
-      if (custUnit && custUnit.value) {
-        const profit = (cents(custUnit.value) - unit) * q;
-        set('#calc-cust-total', money(total + profit)); set('#calc-profit', money(profit));
+      if (custUnit) {
+        const ok = custUnit.value && f('director_id') && f('director_id').value;
+        const profit = ok ? (cents(custUnit.value) - unit) * q : 0;
+        set('#calc-cust-total', ok ? money(total + profit) : '—'); set('#calc-profit', ok ? money(profit) : '—');
+        set('#bar-sub', ok ? `Customer pays ${money(total + profit)} · profit ${money(profit)}` : '');
       }
+      if (cards) $$('.pkg-card', cards).forEach((c, i) => {
+        const on = (i === 0 && !isPkg) || (isPkg && proj && String(proj.packages[i - 1]?.id) === String(opt.value));
+        c.classList.toggle('active', !!on); c.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
       const warn = $('#calc-warning');
       if (warn) warn.classList.toggle('d-none', !(proj && shares > proj.available));
     }
     project.addEventListener('change', loadProject);
     calcForm.addEventListener('input', e => { if (e.target !== project) recalc(); });
     pkg.addEventListener('change', () => recalc(true));
-    if (project.value) loadProject(); else recalc();
+    if (project.value) loadProject(); else { renderCards(); recalc(); }
   }
 
   /* ---------- invoice line items ---------- */
@@ -366,4 +426,70 @@
     series.forEach(s => { const sp = document.createElement('span'); sp.innerHTML = `<i style="background:${s.color}"></i>`; sp.append(s.name); lg.appendChild(sp); });
     holder.appendChild(lg);
   });
+
+  /* ---------- phone "app" shell ---------- */
+  // Back arrow: go back inside the app when we came from it, otherwise follow the link (dashboard).
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-back]');
+    if (!a) return;
+    if (history.length > 1 && document.referrer.startsWith(location.origin)) { e.preventDefault(); history.back(); }
+  });
+  // Search icon in the app bar opens the global search under it.
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[data-search-toggle]')) return;
+    const f = $('#topSearch');
+    if (!f) return;
+    document.body.classList.toggle('search-open');
+    if (document.body.classList.contains('search-open')) f.querySelector('input').focus();
+  });
+
+  // Floating "+" button for the page's main create action (e.g. "New Lead").
+  const mainAction = $$('.page-actions a.btn-brand').find(a => a.querySelector('.bi-plus-lg, .bi-cart-plus, .bi-person-plus'));
+  if (mainAction) {
+    const fab = document.createElement('a');
+    fab.href = mainAction.href; fab.className = 'fab'; fab.setAttribute('aria-label', mainAction.textContent.trim());
+    fab.innerHTML = '<i class="bi bi-plus-lg"></i>';
+    document.body.appendChild(fab);
+    document.body.classList.add('has-fab');
+  }
+
+  // List filters: on phones keep only the search box, the rest behind a "Filters" button.
+  $$('form.filters').forEach(form => {
+    const extra = $$(':scope > :not(.search):not([type="hidden"])', form);
+    if (!extra.length) return;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn btn-light filter-toggle';
+    btn.innerHTML = '<i class="bi bi-funnel"></i><span class="visually-hidden">Filters</span>';
+    const active = extra.some(el => el.value);
+    if (active) btn.classList.add('active');
+    btn.addEventListener('click', () => form.classList.toggle('open'));
+    form.prepend(btn);
+    const search = $('.search', form);
+    if (search) form.prepend(search);
+  });
+
+  // Tables become stacked cards on phones: label every cell with its column header.
+  function labelTables(root) {
+    $$('table.table', root).forEach(t => {
+      if (t.closest('.d-none.d-md-block') || t.dataset.cards) return;
+      const heads = $$(':scope > thead th', t).map(th => th.textContent.trim());
+      if (!heads.length) return;
+      t.dataset.cards = '1'; t.classList.add('table-cards');
+      $$(':scope > tbody > tr, :scope > tfoot > tr', t).forEach(tr => {
+        const cells = $$(':scope > td, :scope > th', tr);
+        // "Subtotal | 1,000" style rows (label cell spanning columns): show as one label/value line.
+        if (cells.length === 2 && cells[0].colSpan > 1) { tr.classList.add('tr-kv'); return; }
+        let col = 0;
+        cells.forEach(td => {
+          if (td.colSpan >= heads.length) td.classList.add('td-full');
+          else if (heads[col]) td.dataset.label = heads[col];
+          col += td.colSpan || 1;
+        });
+      });
+    });
+  }
+  labelTables(document);
+  // Lists refreshed by AJAX filtering/pagination.
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) labelTables(n); })))
+    .observe($('.content') || document.body, { childList: true, subtree: true });
 })();

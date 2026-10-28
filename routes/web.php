@@ -17,6 +17,7 @@ $router->group(['middleware' => ['guest']], function ($r) {
 
 /* ---------- public (no auth): company logo ---------- */
 $router->get('/media/logo/{id}', [C\MediaController::class, 'logo']);
+$router->get('/manifest.webmanifest', [C\MediaController::class, 'manifest']);
 
 /* ---------- authenticated ---------- */
 $router->group(['middleware' => ['auth']], function ($r) {

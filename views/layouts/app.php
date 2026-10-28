@@ -25,11 +25,30 @@ foreach ($menu as $item) {
     }
 }
 $isActive = static fn(string $u): bool => $u === $activeUrl;
+// Phone bottom tab bar: the first four sections the user may open, then "More" (opens the full menu).
+$tabs = array_slice(array_values(array_filter([
+    ['Home', 'house', '/', 'dashboard.view'],
+    ['Leads', 'people', '/leads', 'leads.view'],
+    ['Customers', 'person-vcard', '/customers', 'customers.view'],
+    ['Sales', 'cart-check', '/sales', 'sales.view'],
+    ['Invoices', 'receipt', '/invoices', 'invoices.view'],
+    ['Payments', 'cash-coin', '/payments', 'payments.view'],
+    ['Projects', 'buildings', '/projects', 'projects.view'],
+], static fn($t) => can($t[3]))), 0, 4);
+$tabActive = static fn(string $u): bool => $u === '/' ? $path === '/' : ($path === $u || str_starts_with($path, $u . '/'));
+$isHome = $path === '/';
 ?><!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="<?= e($brand) ?>">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="<?= e($co['name'] ?? config('name')) ?>">
+<link rel="manifest" href="<?= url('/manifest.webmanifest') ?>">
+<link rel="apple-touch-icon" href="<?= asset('images/favicon.svg') ?>">
 <meta name="csrf-token" content="<?= csrf_token() ?>">
 <meta name="base-url" content="<?= e(base_path_prefix()) ?>">
 <title><?= e(($title ?? 'Dashboard') . ' · ' . ($co['name'] ?? config('name'))) ?></title>
@@ -39,7 +58,7 @@ $isActive = static fn(string $u): bool => $u === $activeUrl;
 <link rel="stylesheet" href="<?= asset('css/app.css') ?>">
 <style>:root{--brand:<?= e($brand) ?>}</style>
 </head>
-<body>
+<body class="<?= $isHome ? 'is-home' : '' ?>">
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <a class="sidebar-brand" href="<?= url('/') ?>">
@@ -76,7 +95,9 @@ $isActive = static fn(string $u): bool => $u === $activeUrl;
 
   <div class="main">
     <header class="topbar">
-      <button class="btn btn-icon d-lg-none" type="button" data-sidebar-open aria-label="Menu"><i class="bi bi-list"></i></button>
+      <?php if (!$isHome): ?><a class="btn btn-icon appbar-back" href="<?= url('/') ?>" data-back aria-label="Back"><i class="bi bi-arrow-left"></i></a><?php endif; ?>
+      <button class="btn btn-icon d-lg-none<?= $isHome ? '' : ' appbar-hide' ?>" type="button" data-sidebar-open aria-label="Menu"><i class="bi bi-list"></i></button>
+      <div class="appbar-title"><?= e($isHome ? ($co['name'] ?? config('name')) : ($title ?? '')) ?></div>
       <a class="topbar-brand d-lg-none" href="<?= url('/') ?>">
         <?php if (!empty($co['logo'])): ?>
           <img src="<?= url('/media/logo/' . (int) $co['id']) ?>" alt="" class="brand-logo">
@@ -85,11 +106,12 @@ $isActive = static fn(string $u): bool => $u === $activeUrl;
         <?php endif; ?>
         <span class="topbar-brand-name"><?= e($co['name'] ?? config('name')) ?></span>
       </a>
-      <form class="topbar-search d-none d-md-flex" action="<?= url('/search') ?>" method="get" role="search">
+      <form class="topbar-search d-none d-md-flex" id="topSearch" action="<?= url('/search') ?>" method="get" role="search">
         <i class="bi bi-search"></i>
         <input type="search" name="q" class="form-control" placeholder="Search leads, customers, invoices…" value="<?= e($_GET['q'] ?? '') ?>" autocomplete="off">
       </form>
       <div class="ms-auto d-flex align-items-center gap-2">
+        <button class="btn btn-icon appbar-only" type="button" data-search-toggle aria-label="Search"><i class="bi bi-search"></i></button>
         <?php if (count($companies) > 1): ?>
           <form method="post" action="<?= url('/company/switch') ?>" class="d-none d-sm-block">
             <?= csrf_field() ?>
@@ -141,6 +163,14 @@ $isActive = static fn(string $u): bool => $u === $activeUrl;
       <?= partial('partials/alerts') ?>
       <?= $content ?>
     </main>
+    <?php if ($tabs): ?>
+    <nav class="tabbar" aria-label="Main">
+      <?php foreach ($tabs as [$label, $icon, $link]): $on = $tabActive($link); ?>
+        <a href="<?= url($link) ?>" class="<?= $on ? 'active' : '' ?>"<?= $on ? ' aria-current="page"' : '' ?>><i class="bi bi-<?= $icon ?><?= $on ? '-fill' : '' ?>"></i><span><?= $label ?></span></a>
+      <?php endforeach; ?>
+      <button type="button" data-sidebar-open><i class="bi bi-grid"></i><span>More</span></button>
+    </nav>
+    <?php endif; ?>
     <footer class="footer">
       <span>&copy; <?= date('Y') ?> <?= e($co['name'] ?? '') ?></span>
       <span class="text-muted"><?= e(config('name')) ?></span>

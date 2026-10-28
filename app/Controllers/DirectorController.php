@@ -15,7 +15,7 @@ final class DirectorController extends Controller
     {
         $this->authorize('directors.view');
         render('directors/index', [
-            'title' => 'Board of Directors', 'breadcrumbs' => ['CRM' => null, 'Board of Directors' => null],
+            'title' => 'Board of Directors', 'breadcrumbs' => ['HR' => null, 'Board of Directors' => null],
             'directors' => DirectorService::all([Tenant::id()]),
         ]);
     }
@@ -44,7 +44,7 @@ final class DirectorController extends Controller
         $this->authorize('directors.view');
         $d = DirectorService::find($id);
         render('directors/show', [
-            'title' => $d['name'], 'breadcrumbs' => ['Board of Directors' => '/directors', $d['name'] => null], 'd' => $d,
+            'title' => $d['name'], 'breadcrumbs' => ['HR' => null, 'Board of Directors' => '/directors', $d['name'] => null], 'd' => $d,
             'referrals' => can('sales.view') ? DirectorService::referrals($id) : [],
             'purchases' => can('sales.view') ? DirectorService::ownPurchases($d) : [],
         ]);
@@ -75,7 +75,7 @@ final class DirectorController extends Controller
     {
         render('directors/form', [
             'title' => $d ? 'Edit Director' : 'Add Director',
-            'breadcrumbs' => ['Board of Directors' => '/directors', ($d ? $d['name'] : 'Add') => null],
+            'breadcrumbs' => ['HR' => null, 'Board of Directors' => '/directors', ($d ? $d['name'] : 'Add') => null],
             'd' => $d, 'rec' => $rec,
             'customers' => CustomerService::options(isset($rec['customer_id']) ? (int) $rec['customer_id'] : null),
             'employees' => Database::pairs("SELECT id, CONCAT(name, ' (', employee_code, ')') FROM employees WHERE company_id = ? AND deleted_at IS NULL AND status = 'active' ORDER BY name", [Tenant::id()]),

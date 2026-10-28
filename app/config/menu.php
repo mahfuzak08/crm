@@ -11,7 +11,6 @@ return [
     ['label' => 'CRM', 'icon' => 'people', 'children' => [
         ['label' => 'Leads', 'url' => '/leads', 'perm' => 'leads.view'],
         ['label' => 'Customers', 'url' => '/customers', 'perm' => 'customers.view'],
-        ['label' => 'Board of Directors', 'url' => '/directors', 'perm' => 'directors.view'],
         ['label' => 'Activities', 'url' => '/activities', 'perm' => 'activities.view'],
         ['label' => 'Offers', 'url' => '/offers', 'perm' => 'offers.view'],
         ['label' => 'Documents', 'url' => '/documents', 'perm' => 'documents.view'],
@@ -33,6 +32,7 @@ return [
 
     ['label' => 'HR', 'icon' => 'person-badge', 'children' => [
         ['label' => 'Employees', 'url' => '/employees', 'perm' => 'employees.view'],
+        ['label' => 'Board of Directors', 'url' => '/directors', 'perm' => 'directors.view'],
         ['label' => 'Departments', 'url' => '/master-data/department', 'perm' => 'master_data.manage'],
         ['label' => 'Designations', 'url' => '/master-data/designation', 'perm' => 'master_data.manage'],
         ['label' => 'Salary', 'url' => '/salary', 'perm' => 'salary.view'],
