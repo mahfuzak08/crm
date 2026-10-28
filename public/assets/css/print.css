@@ -40,6 +40,8 @@ table.items td { padding: 8px; border-bottom: 1px solid var(--line); vertical-al
 .stamp { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); font-size: 64px; font-weight: 800; letter-spacing: .1em; opacity: .12; border: 6px solid currentColor; padding: 4px 24px; border-radius: 12px; pointer-events: none; }
 .stamp.paid { color: #188038; } .stamp.cancelled { color: #c5221f; } .stamp.draft { color: #6b7385; }
 .receipt-amount { font-size: 26px; font-weight: 700; color: var(--brand); }
+.copy-label { position: absolute; top: 6mm; right: 15mm; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); border: 1px solid currentColor; border-radius: 4px; padding: 1px 6px; }
+.sheet + .sheet { break-before: page; page-break-before: always; }
 @media print {
   body { background: #fff; }
   .no-print { display: none !important; }

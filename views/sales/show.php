@@ -1,5 +1,6 @@
 <?php App\Core\View::start('actions'); ?>
 <a href="<?= url('/sales/' . $s['id'] . '/agreement') ?>" target="_blank" class="btn btn-light"><i class="bi bi-file-earmark-text me-1"></i>Agreement</a>
+<?php if ($s['director_id']): ?><a href="<?= url('/sales/' . $s['id'] . '/agreement', ['copy' => 'office']) ?>" target="_blank" class="btn btn-light" title="Agreement at package price"><i class="bi bi-building me-1"></i>Office agreement</a><?php endif; ?>
 <?php if ($s['invoice_id'] && can('invoices.view')): ?><a href="<?= url('/invoices/' . $s['invoice_id']) ?>" class="btn btn-light"><i class="bi bi-receipt me-1"></i>Invoice</a><?php endif; ?>
 <?php if ($s['invoice_id'] && $s['status'] === 'confirmed' && (float) $s['due_amount'] > 0 && can('payments.create')): ?><a href="<?= url('/payments/create', ['invoice' => $s['invoice_id']]) ?>" class="btn btn-success"><i class="bi bi-cash me-1"></i>Receive payment</a><?php endif; ?>
 <?php if ($s['status'] === 'reserved' && can('sales.create')): ?><?= post_button('/sales/' . $s['id'] . '/confirm', '', ['html' => '<i class="bi bi-check2-circle me-1"></i>Confirm sale', 'class' => 'btn btn-brand', 'confirm' => 'Confirm this reservation and create the invoice?']) ?><?php endif; ?>
@@ -26,6 +27,15 @@
         </tbody>
       </table></div>
     </div></div>
+    <?php if ($s['director_id']): $cf = App\Services\SaleService::customerFigures($s, (string) $s['paid_amount'], (string) $s['grand_total']); ?>
+    <div class="card mb-3 border-success-subtle"><div class="card-header">Director referral <span class="small text-muted fw-normal">figures above are the office copy (package price)</span></div>
+      <div class="card-body"><div class="row g-3 text-center">
+        <div class="col-6 col-md-3"><div class="stat-label">Office (package) total</div><div class="fw-semibold"><?= money($s['grand_total']) ?></div></div>
+        <div class="col-6 col-md-3"><div class="stat-label">Customer price</div><div class="fw-semibold"><?= money($s['customer_unit_price']) ?> × <?= (int) $s['quantity'] ?></div></div>
+        <div class="col-6 col-md-3"><div class="stat-label">Customer copy total</div><div class="fw-semibold"><?= money($s['customer_total']) ?></div><div class="small text-muted">paid <?= money($cf['paid']) ?> · due <?= money($cf['due']) ?></div></div>
+        <div class="col-6 col-md-3"><div class="stat-label">Director profit</div><div class="fw-bold text-success"><?= money($s['director_profit']) ?></div></div>
+      </div></div></div>
+    <?php endif; ?>
     <?php if ($payments): ?>
     <div class="card"><div class="card-header">Payments</div><div class="table-responsive"><table class="table">
       <thead><tr><th>Receipt</th><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th><th>Status</th></tr></thead><tbody>
@@ -39,6 +49,7 @@
       <dt>Invoice</dt><dd><?= $s['invoice_id'] ? '<a href="' . url('/invoices/' . $s['invoice_id']) . '">' . e($s['invoice_number']) . '</a>' : '—' ?></dd>
       <?php if ($s['offer_id']): ?><dt>Offer</dt><dd><a href="<?= url('/offers/' . $s['offer_id']) ?>"><?= e($s['offer_number']) ?></a></dd><?php endif; ?>
       <dt>Sales person</dt><dd><?= e($s['sales_person'] ?? '—') ?></dd>
+      <?php if ($s['director_id']): ?><dt>Referred by</dt><dd><?= can('directors.view') ? '<a href="' . url('/directors/' . $s['director_id']) . '">' . e($s['director_name']) . '</a>' : e($s['director_name']) ?> <span class="badge text-bg-light text-dark">Director</span></dd><?php endif; ?>
       <dt>Created by</dt><dd><?= e($s['created_by_name']) ?>, <?= e(fdate($s['created_at'], true)) ?></dd>
       <?php if ($s['status'] === 'cancelled'): ?><dt>Cancelled</dt><dd class="text-danger"><?= e(fdate($s['cancelled_at'], true)) ?><br><?= e($s['cancel_reason']) ?></dd><?php endif; ?>
       <?php if ($s['notes']): ?><dt>Notes</dt><dd style="white-space:pre-line"><?= e($s['notes']) ?></dd><?php endif; ?>

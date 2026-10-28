@@ -13,6 +13,7 @@
     <select name="status" class="form-select"><option value="">All statuses</option><?php foreach (['confirmed', 'reserved', 'cancelled'] as $st): ?><option value="<?= $st ?>"<?= selected($st, $f['status']) ?>><?= ucfirst($st) ?></option><?php endforeach; ?></select>
     <select name="project" class="form-select"><option value="">All projects</option><?php foreach ($projects as $id => $n): ?><option value="<?= (int) $id ?>"<?= selected($id, $f['project']) ?>><?= e($n) ?></option><?php endforeach; ?></select>
     <select name="sales_person" class="form-select"><option value="">All sales persons</option><?php foreach ($users as $id => $n): ?><option value="<?= (int) $id ?>"<?= selected($id, $f['sales_person']) ?>><?= e($n) ?></option><?php endforeach; ?></select>
+    <?php if ($directors): ?><select name="director" class="form-select"><option value="">All directors</option><?php foreach ($directors as $id => $n): ?><option value="<?= (int) $id ?>"<?= selected($id, $f['director']) ?>>Via <?= e($n) ?></option><?php endforeach; ?></select><?php endif; ?>
     <input type="date" name="from" class="form-control" value="<?= e($f['from']) ?>"><input type="date" name="to" class="form-control" value="<?= e($f['to']) ?>">
   </form>
   <div id="list"><?= partial('sales/_list', ['p' => $p]) ?></div>

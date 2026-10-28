@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Services\ActivityService;
 use App\Services\CustomerService;
+use App\Services\DirectorService;
 use App\Services\DocumentService;
 use App\Services\FileUploadService;
 use App\Services\MasterDataService;
@@ -56,8 +57,8 @@ final class CustomerController extends Controller
         $cid = Tenant::id();
         render('customers/show', [
             'title' => $c['name'], 'breadcrumbs' => ['Customers' => '/customers', $c['customer_code'] => null],
-            'c' => $c, 'summary' => CustomerService::summary($id),
-            'sales' => can('sales.view') ? Database::fetchAll('SELECT s.*, p.project_name FROM share_sales s JOIN projects p ON p.id = s.project_id WHERE s.customer_id = ? AND s.company_id = ? ORDER BY s.id DESC', [$id, $cid]) : [],
+            'c' => $c, 'summary' => CustomerService::summary($id), 'director' => DirectorService::forRecord('customer_id', $id),
+            'sales' => can('sales.view') ? Database::fetchAll('SELECT s.*, p.project_name, d.name AS director_name FROM share_sales s JOIN projects p ON p.id = s.project_id LEFT JOIN directors d ON d.id = s.director_id WHERE s.customer_id = ? AND s.company_id = ? ORDER BY s.id DESC', [$id, $cid]) : [],
             'invoices' => can('invoices.view') ? Database::fetchAll('SELECT * FROM invoices WHERE customer_id = ? AND company_id = ? AND deleted_at IS NULL ORDER BY id DESC', [$id, $cid]) : [],
             'payments' => can('payments.view') ? Database::fetchAll('SELECT p.*, i.invoice_number, m.name AS method FROM payments p JOIN invoices i ON i.id = p.invoice_id JOIN master_data m ON m.id = p.payment_method_id WHERE p.customer_id = ? AND p.company_id = ? ORDER BY p.id DESC', [$id, $cid]) : [],
             'offers' => can('offers.view') ? Database::fetchAll('SELECT id, offer_number, total, status, created_at FROM offers WHERE customer_id = ? AND company_id = ? AND deleted_at IS NULL ORDER BY id DESC', [$id, $cid]) : [],

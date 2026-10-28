@@ -91,6 +91,14 @@ $router->group(['middleware' => ['auth']], function ($r) {
     $r->post('/customers/{id}/delete', [C\CustomerController::class, 'destroy']);
     $r->get('/customers/{id}/file/{slug}', [C\CustomerController::class, 'file']);
 
+    $r->get('/directors', [C\DirectorController::class, 'index']);
+    $r->get('/directors/create', [C\DirectorController::class, 'create']);
+    $r->post('/directors', [C\DirectorController::class, 'store']);
+    $r->get('/directors/{id}', [C\DirectorController::class, 'show']);
+    $r->get('/directors/{id}/edit', [C\DirectorController::class, 'edit']);
+    $r->post('/directors/{id}', [C\DirectorController::class, 'update']);
+    $r->post('/directors/{id}/delete', [C\DirectorController::class, 'destroy']);
+
     $r->get('/activities', [C\ActivityController::class, 'index']);
     $r->post('/activities', [C\ActivityController::class, 'store']);
     $r->post('/activities/{id}/delete', [C\ActivityController::class, 'destroy']);

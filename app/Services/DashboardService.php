@@ -27,8 +27,9 @@ final class DashboardService
             'collection'    => (string) $v("SELECT COALESCE(SUM(amount),0) FROM payments WHERE company_id IN ($in) AND status = 'confirmed'"),
             'due'           => (string) $v("SELECT COALESCE(SUM(due_amount),0) FROM invoices WHERE company_id IN ($in) AND status IN ('unpaid','partial','overdue') AND deleted_at IS NULL"),
             'expense'       => (string) $v("SELECT COALESCE(SUM(amount),0) FROM expenses WHERE company_id IN ($in) AND status = 'approved' AND deleted_at IS NULL"),
-            'employees'     => (int) $v("SELECT COUNT(*) FROM employees WHERE company_id IN ($in) AND deleted_at IS NULL AND status = 'active'"),
         ];
+        $board = AuthService::can('directors.view') ? DirectorService::all($cids, true) : [];
+        $cards['directors'] = count($board);
         $cards['available_shares'] = max(0, $cards['total_shares'] - $cards['sold_shares'] - $cards['reserved']);
 
         // Last 12 months series
@@ -53,7 +54,7 @@ final class DashboardService
         $converted = (int) $v("SELECT COUNT(*) FROM leads WHERE company_id IN ($in) AND deleted_at IS NULL AND customer_id IS NOT NULL");
         $cards['conversion_rate'] = $cards['leads'] > 0 ? round($converted / $cards['leads'] * 100, 1) : 0;
 
-        return compact('cards', 'series', 'funnel');
+        return compact('cards', 'series', 'funnel', 'board');
     }
 
     /** Personal work lists for the current user (single company). */

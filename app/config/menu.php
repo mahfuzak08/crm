@@ -11,6 +11,7 @@ return [
     ['label' => 'CRM', 'icon' => 'people', 'children' => [
         ['label' => 'Leads', 'url' => '/leads', 'perm' => 'leads.view'],
         ['label' => 'Customers', 'url' => '/customers', 'perm' => 'customers.view'],
+        ['label' => 'Board of Directors', 'url' => '/directors', 'perm' => 'directors.view'],
         ['label' => 'Activities', 'url' => '/activities', 'perm' => 'activities.view'],
         ['label' => 'Offers', 'url' => '/offers', 'perm' => 'offers.view'],
         ['label' => 'Documents', 'url' => '/documents', 'perm' => 'documents.view'],

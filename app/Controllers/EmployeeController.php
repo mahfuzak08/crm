@@ -7,6 +7,7 @@ use App\Core\Database;
 use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\Response;
+use App\Services\DirectorService;
 use App\Services\EmployeeService;
 use App\Services\FileUploadService;
 use App\Services\MasterDataService;
@@ -46,6 +47,7 @@ final class EmployeeController extends Controller
         $e = EmployeeService::find($id);
         render('employees/show', [
             'title' => $e['name'], 'breadcrumbs' => ['Employees' => '/employees', $e['employee_code'] => null], 'e' => $e,
+            'director' => DirectorService::forRecord('employee_id', $id),
             'salary' => can('salary.view') ? SalaryService::compute($e) : null,
             'payments' => can('salary.view') ? Database::fetchAll('SELECT * FROM salary_payments WHERE employee_id = ? AND company_id = ? ORDER BY salary_month DESC LIMIT 24', [$id, Tenant::id()]) : [],
         ]);

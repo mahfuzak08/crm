@@ -7,6 +7,7 @@ use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
 use App\Services\CustomerService;
+use App\Services\DirectorService;
 use App\Services\MasterDataService;
 use App\Services\OfferService;
 use App\Services\ProjectService;
@@ -20,15 +21,16 @@ final class SaleController extends Controller
     public function index(): never
     {
         $this->authorize('sales.view');
-        $f = Request::filters(['q', 'status', 'project', 'customer', 'sales_person', 'from', 'to', 'sort', 'dir']);
+        $f = Request::filters(['q', 'status', 'project', 'customer', 'sales_person', 'director', 'from', 'to', 'sort', 'dir']);
         if (Request::str('export') === 'csv') {
             $this->authorize('reports.export');
             $rows = (static function () use ($f) {
                 foreach (SaleService::query($f)->cursor() as $r) {
-                    yield [$r['sale_number'], $r['sale_date'], $r['customer_name'], $r['project_name'], $r['package_name'], $r['shares'], $r['grand_total'], $r['paid_amount'], $r['due_amount'], $r['status'], $r['sales_person']];
+                    yield [$r['sale_number'], $r['sale_date'], $r['customer_name'], $r['project_name'], $r['package_name'], $r['shares'], $r['grand_total'], $r['paid_amount'], $r['due_amount'], $r['status'], $r['sales_person'],
+                        $r['director_name'], $r['customer_total'], $r['director_id'] ? $r['director_profit'] : null];
                 }
             })();
-            Response::csv('share-sales-' . date('Ymd') . '.csv', ['Sale', 'Date', 'Customer', 'Project', 'Package', 'Shares', 'Total', 'Paid', 'Due', 'Status', 'Sales person'], $rows);
+            Response::csv('share-sales-' . date('Ymd') . '.csv', ['Sale', 'Date', 'Customer', 'Project', 'Package', 'Shares', 'Total', 'Paid', 'Due', 'Status', 'Sales person', 'Referred by director', 'Customer price total', 'Director profit'], $rows);
         }
         $q = SaleService::query($f);
         $this->view('sales/index', [
@@ -36,6 +38,7 @@ final class SaleController extends Controller
             'p' => $q->paginate($this->page()),
             'totals' => SaleService::query($f)->where("s.status = 'confirmed'")->aggregate(['shares' => 'COALESCE(SUM(s.shares),0)', 'total' => 'COALESCE(SUM(s.grand_total),0)', 'due' => 'COALESCE(SUM(s.due_amount),0)']),
             'projects' => ProjectService::options(), 'users' => UserService::options(),
+            'directors' => can('directors.view') ? DirectorService::options() : [],
         ], 'sales/_list');
     }
 
@@ -50,6 +53,9 @@ final class SaleController extends Controller
             CustomerService::find($cid);
             $rec['customer_id'] = $cid;
         }
+        if ($did = Request::int('director')) {
+            $rec['director_id'] = $did;
+        }
         $offer = null;
         if ($oid = Request::int('offer')) {
             $offer = OfferService::find($oid);
@@ -62,6 +68,7 @@ final class SaleController extends Controller
             'projects' => ProjectService::options(),
             'customers' => CustomerService::options(isset($rec['customer_id']) ? (int) $rec['customer_id'] : null),
             'users' => UserService::options(), 'methods' => MasterDataService::options('payment_method'),
+            'directors' => DirectorService::options(),
             'feeOverride' => SettingsService::get('sales.allow_fee_override') === '1',
         ]);
     }
@@ -101,6 +108,11 @@ final class SaleController extends Controller
     {
         $this->authorize('sales.view');
         $s = SaleService::find($id);
+        // The agreement is the customer's document: on a referral it states the director's price, unless the office version is asked for.
+        if ($s['director_id'] && Request::str('copy') !== 'office') {
+            $cf = SaleService::customerFigures($s, (string) $s['paid_amount'], (string) $s['grand_total']);
+            $s = ['unit_price' => $cf['unit_price'], 'subtotal' => $cf['subtotal'], 'grand_total' => $cf['total'], 'paid_amount' => $cf['paid'], 'due_amount' => $cf['due']] + $s;
+        }
         render('sales/agreement', ['s' => $s, 'company' => Tenant::company(), 'title' => 'Agreement ' . $s['sale_number'], 'docTitle' => 'Share Purchase Agreement',
             'terms' => SettingsService::get('agreement.terms')], 'layouts/print');
     }

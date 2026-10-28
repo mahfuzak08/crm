@@ -1,4 +1,6 @@
 <?php App\Core\View::start('actions'); ?>
+<?php if ($director && can('directors.view')): ?><a href="<?= url('/directors/' . $director['id']) ?>" class="btn btn-light"><i class="bi bi-person-workspace me-1"></i>Director<?= $director['status'] !== 'active' ? ' (inactive)' : '' ?></a>
+<?php elseif (!$director && can('directors.manage')): ?><a href="<?= url('/directors/create', ['employee' => $e['id']]) ?>" class="btn btn-light"><i class="bi bi-person-workspace me-1"></i>Make director</a><?php endif; ?>
 <?php if (can('salary.pay') && $e['status'] === 'active'): ?><a href="<?= url('/salary/create', ['employee' => $e['id']]) ?>" class="btn btn-success"><i class="bi bi-cash me-1"></i>Pay salary</a><?php endif; ?>
 <?php if (can('employees.edit')): ?><a href="<?= url('/employees/' . $e['id'] . '/edit') ?>" class="btn btn-brand"><i class="bi bi-pencil me-1"></i>Edit</a><?php endif; ?>
 <?php if (can('employees.delete')): ?><?= post_button('/employees/' . $e['id'] . '/delete', '', ['html' => '<i class="bi bi-trash"></i>', 'class' => 'btn btn-outline-danger', 'confirm' => 'Delete this employee?']) ?><?php endif; ?>

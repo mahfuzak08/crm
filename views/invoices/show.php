@@ -1,7 +1,14 @@
 <?php
 $payable = in_array($inv['status'], ['unpaid', 'partial', 'overdue'], true);
 App\Core\View::start('actions'); ?>
-<?php if (can('invoices.print')): ?><a href="<?= url('/invoices/' . $inv['id'] . '/print') ?>" target="_blank" class="btn btn-light"><i class="bi bi-printer me-1"></i>Print / PDF</a><?php endif; ?>
+<?php if (can('invoices.print')): ?>
+  <div class="btn-group"><a href="<?= url('/invoices/' . $inv['id'] . '/print') ?>" target="_blank" class="btn btn-light"><i class="bi bi-printer me-1"></i>Print both copies</a>
+    <button type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"><span class="visually-hidden">Copies</span></button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="<?= url('/invoices/' . $inv['id'] . '/print', ['copy' => 'office']) ?>" target="_blank">Office copy</a></li>
+      <li><a class="dropdown-item" href="<?= url('/invoices/' . $inv['id'] . '/print', ['copy' => 'customer']) ?>" target="_blank">Customer copy</a></li>
+    </ul></div>
+<?php endif; ?>
 <?php if ($payable && can('payments.create')): ?><a href="<?= url('/payments/create', ['invoice' => $inv['id']]) ?>" class="btn btn-success"><i class="bi bi-cash me-1"></i>Receive payment</a><?php endif; ?>
 <?php if ($inv['status'] === 'draft' && can('invoices.edit')): ?>
   <a href="<?= url('/invoices/' . $inv['id'] . '/edit') ?>" class="btn btn-light"><i class="bi bi-pencil me-1"></i>Edit</a>
@@ -32,6 +39,11 @@ App\Core\View::start('actions'); ?>
         </tbody>
       </table></div>
       <?php if ($inv['notes']): ?><div class="small"><strong>Notes:</strong> <?= nl2br(e($inv['notes'])) ?></div><?php endif; ?>
+      <?php if ($inv['director_id']): $cc = App\Services\InvoiceService::customerCopy($inv); ?>
+        <div class="alert alert-info small mt-3 mb-0"><i class="bi bi-person-up me-1"></i>Referral sale by director <strong><?= e($inv['director_name']) ?></strong>.
+          These are the <strong>office</strong> figures (package price). The customer copy shows <strong><?= money($cc['grand_total']) ?></strong>
+          (paid <?= money($cc['paid_amount']) ?>, due <?= money($cc['due_amount']) ?>); director profit <strong><?= money($inv['director_profit']) ?></strong>.</div>
+      <?php endif; ?>
     </div></div>
     <div class="card"><div class="card-header">Payments</div><div class="table-responsive"><table class="table">
       <thead><tr><th>Receipt</th><th>Date</th><th>Method</th><th>Reference</th><th>Received by</th><th class="text-end">Amount</th><th>Status</th></tr></thead><tbody>

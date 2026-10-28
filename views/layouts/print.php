@@ -1,5 +1,5 @@
 <?php
-/** Print/PDF layout. Vars: $content, $company, $title, optional $public */
+/** Print/PDF layout. Vars: $content, $company, $title, optional $public; optional $sheets = [[docTitle, copyLabel, content], ...] (one page each) */
 $brand = preg_match('/^#[0-9a-f]{6}$/i', (string) ($company['theme_color'] ?? '')) ? $company['theme_color'] : '#0f766e';
 $tpl = setting_safe('invoice.template', 'classic');
 ?><!doctype html>
@@ -17,7 +17,9 @@ $tpl = setting_safe('invoice.template', 'classic');
   <?php if (empty($public)): ?><a href="#" class="tb-btn" data-back>&larr; Back</a><?php endif; ?>
   <button type="button" class="tb-btn primary" data-print>Print / Save as PDF</button>
 </div>
+<?php foreach ($sheets ?? [['docTitle' => $docTitle ?? '', 'content' => $content]] as $sheet): ?>
 <div class="sheet">
+  <?php if (!empty($sheet['copyLabel'])): ?><div class="copy-label"><?= e($sheet['copyLabel']) ?></div><?php endif; ?>
   <header class="doc-head">
     <div class="brand">
       <?php if (!empty($company['logo'])): ?><img src="<?= url('/media/logo/' . (int) $company['id']) ?>" alt="" class="logo"><?php endif; ?>
@@ -30,10 +32,11 @@ $tpl = setting_safe('invoice.template', 'classic');
         </div>
       </div>
     </div>
-    <div class="doc-title"><?= e($docTitle ?? '') ?></div>
+    <div class="doc-title"><?= e($sheet['docTitle'] ?? '') ?></div>
   </header>
-  <?= $content ?>
+  <?= $sheet['content'] ?>
 </div>
+<?php endforeach; ?>
 <script src="<?= asset('js/print.js') ?>"></script>
 </body>
 </html>

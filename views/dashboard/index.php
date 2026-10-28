@@ -23,7 +23,7 @@ $cards = [
     ['Total Collection', money_short($c['collection']), 'cash-coin', 'green', 'payments.view', '/payments'],
     ['Total Due', money_short($c['due']), 'exclamation-circle', 'red', 'invoices.view', '/reports/due'],
     ['Total Expense', money_short($c['expense']), 'wallet2', 'red', 'expenses.view', '/expenses'],
-    ['Employees', number_format($c['employees']), 'person-badge', 'slate', 'employees.view', '/employees'],
+    ['Board of Directors', number_format($c['directors']), 'person-workspace', 'slate', 'directors.view', '/directors'],
 ];
 App\Core\View::start('actions');
 if ($companies): ?>
@@ -55,6 +55,18 @@ App\Core\View::end(); ?>
     <div class="card-body"><div id="chartLeads"></div><script type="application/json" data-chart="chartLeads"><?= json_encode($leadChart, $jsonFlags) ?></script></div></div></div>
   <?php endif; ?>
 </div>
+
+<?php if ($d['board']): ?>
+<div class="card mb-3"><div class="card-header">Board of Directors <a href="<?= url('/directors') ?>" class="small fw-normal">all</a></div>
+  <div class="card-body"><div class="row g-3">
+    <?php foreach ($d['board'] as $b): ?>
+      <div class="col-6 col-md-4 col-xl-3"><a href="<?= url('/directors/' . $b['id']) ?>" class="d-flex align-items-center gap-2 text-reset">
+        <span class="avatar"><?= e(initials($b['name'])) ?></span>
+        <span class="min-w-0"><span class="d-block fw-medium text-truncate"><?= e($b['name']) ?></span>
+          <span class="d-block small text-muted text-truncate"><?= e($b['designation'] ?: 'Director') ?> · <?= number_format((int) $b['own_shares']) ?> shares</span></span></a></div>
+    <?php endforeach; ?>
+  </div></div></div>
+<?php endif; ?>
 
 <div class="row g-3">
   <?php if (isset($lists['followups'])): ?>

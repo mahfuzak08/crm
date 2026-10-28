@@ -35,9 +35,10 @@ final class InvoiceService
     {
         $inv = Database::fetch(
             'SELECT i.*, c.name AS customer_name, c.customer_code, c.phone AS customer_phone, c.email AS customer_email, c.address AS customer_address,
-                    p.project_name, p.project_code, s.sale_number, u.name AS created_by_name
+                    p.project_name, p.project_code, s.sale_number, u.name AS created_by_name,
+                    s.director_id, s.customer_unit_price, s.customer_total, s.director_profit, s.unit_price AS sale_unit_price, s.subtotal AS sale_subtotal, d.name AS director_name
              FROM invoices i JOIN customers c ON c.id = i.customer_id LEFT JOIN projects p ON p.id = i.project_id
-             LEFT JOIN share_sales s ON s.id = i.sale_id LEFT JOIN users u ON u.id = i.created_by
+             LEFT JOIN share_sales s ON s.id = i.sale_id LEFT JOIN users u ON u.id = i.created_by LEFT JOIN directors d ON d.id = s.director_id
              WHERE i.id = ? AND i.company_id = ? AND i.deleted_at IS NULL',
             [$id, Tenant::id()]
         );
@@ -45,6 +46,35 @@ final class InvoiceService
             throw new HttpException(404);
         }
         $inv['items'] = Database::fetchAll('SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY sort_order, id', [$id]);
+        return $inv;
+    }
+
+    /**
+     * Customer copy of an invoice. Same as the office copy, except on a director-referred sale:
+     * the share line shows the director's price and totals/paid/due are restated to match.
+     */
+    public static function customerCopy(array $inv): array
+    {
+        if (empty($inv['director_id']) || $inv['customer_total'] === null) {
+            return $inv;
+        }
+        $profit = Money::toCents($inv['director_profit']);
+        foreach ($inv['items'] as $k => $it) {
+            if ((int) $it['sort_order'] === 0) { // share purchase line (see createForSale)
+                $inv['items'][$k]['unit_price'] = $inv['customer_unit_price'];
+                $inv['items'][$k]['amount'] = Money::fromCents(Money::toCents($it['amount']) + $profit);
+                break;
+            }
+        }
+        $cf = SaleService::customerFigures(
+            ['director_id' => $inv['director_id'], 'customer_total' => $inv['customer_total'], 'customer_unit_price' => $inv['customer_unit_price'],
+             'unit_price' => $inv['sale_unit_price'], 'subtotal' => $inv['sale_subtotal'], 'director_profit' => $inv['director_profit']],
+            (string) $inv['paid_amount'], (string) $inv['grand_total']
+        );
+        $inv['subtotal'] = Money::fromCents(Money::toCents($inv['subtotal']) + $profit);
+        $inv['grand_total'] = $cf['total'];
+        $inv['paid_amount'] = $cf['paid'];
+        $inv['due_amount'] = $inv['status'] === 'cancelled' ? '0.00' : $cf['due'];
         return $inv;
     }
 

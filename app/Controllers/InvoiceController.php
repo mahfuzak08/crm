@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\View;
 use App\Services\CustomerService;
 use App\Services\InvoiceService;
 use App\Services\ProjectService;
@@ -103,7 +104,17 @@ final class InvoiceController extends Controller
     {
         $this->authorize('invoices.print');
         $inv = InvoiceService::find($id);
-        render('invoices/print', ['inv' => $inv, 'company' => Tenant::company(), 'title' => 'Invoice ' . $inv['invoice_number'], 'docTitle' => 'Invoice'], 'layouts/print');
+        $company = Tenant::company();
+        // Office copy = booked (package) price; customer copy = what the customer pays (director's price on a referral).
+        $copies = ['office' => 'Office copy', 'customer' => 'Customer copy'];
+        $want = Request::str('copy');
+        $sheets = [];
+        foreach (isset($copies[$want]) ? [$want => $copies[$want]] : $copies as $copy => $label) {
+            $sheets[] = ['docTitle' => 'Invoice', 'copyLabel' => $label, 'content' => View::partial('invoices/print', [
+                'inv' => $copy === 'customer' ? InvoiceService::customerCopy($inv) : $inv, 'company' => $company, 'copy' => $copy,
+            ])];
+        }
+        Response::html(View::partial('layouts/print', ['company' => $company, 'title' => 'Invoice ' . $inv['invoice_number'], 'sheets' => $sheets, 'content' => '']));
     }
 
     private function form(?array $inv, array $rec): never

@@ -1,4 +1,6 @@
 <?php App\Core\View::start('actions'); ?>
+<?php if ($director && can('directors.view')): ?><a href="<?= url('/directors/' . $director['id']) ?>" class="btn btn-light"><i class="bi bi-person-workspace me-1"></i>Director<?= $director['status'] !== 'active' ? ' (inactive)' : '' ?></a>
+<?php elseif (!$director && can('directors.manage')): ?><a href="<?= url('/directors/create', ['customer' => $c['id']]) ?>" class="btn btn-light"><i class="bi bi-person-workspace me-1"></i>Make director</a><?php endif; ?>
 <?php if (can('customers.statement')): ?><a href="<?= url('/statements', ['customer' => $c['id']]) ?>" class="btn btn-light"><i class="bi bi-journal-text me-1"></i>Statement</a><?php endif; ?>
 <?php if (can('offers.create')): ?><a href="<?= url('/offers/create', ['customer' => $c['id']]) ?>" class="btn btn-light"><i class="bi bi-send me-1"></i>Offer</a><?php endif; ?>
 <?php if (can('sales.create')): ?><a href="<?= url('/sales/create', ['customer' => $c['id']]) ?>" class="btn btn-outline-brand"><i class="bi bi-cart-plus me-1"></i>Sell shares</a><?php endif; ?>
@@ -62,7 +64,9 @@
     <div class="tab-content">
       <div class="tab-pane fade show active" id="t-sales"><div class="card"><div class="table-responsive"><table class="table">
         <thead><tr><th>Sale</th><th>Date</th><th>Project</th><th class="text-end">Shares</th><th class="text-end">Total</th><th class="text-end">Due</th><th>Status</th></tr></thead><tbody>
-        <?php foreach ($sales as $s): ?><tr><td><a href="<?= url('/sales/' . $s['id']) ?>"><?= e($s['sale_number']) ?></a></td><td class="small"><?= e(fdate($s['sale_date'])) ?></td><td class="small"><?= e($s['project_name']) ?></td><td class="text-end"><?= (int) $s['shares'] ?></td><td class="text-end"><?= money($s['grand_total']) ?></td><td class="text-end"><?= money($s['due_amount']) ?></td><td><?= status_badge($s['status']) ?></td></tr><?php endforeach; ?>
+        <?php foreach ($sales as $s): ?><tr><td><a href="<?= url('/sales/' . $s['id']) ?>"><?= e($s['sale_number']) ?></a></td><td class="small"><?= e(fdate($s['sale_date'])) ?></td><td class="small"><?= e($s['project_name']) ?></td><?php $cf = App\Services\SaleService::customerFigures($s, (string) $s['paid_amount'], (string) $s['grand_total']); ?>
+          <td class="text-end"><?= (int) $s['shares'] ?></td><td class="text-end"><?= money($cf['total']) ?><?php if ($s['director_id']): ?><div class="small text-muted" title="Booked by the company at package price">office <?= money($s['grand_total']) ?></div><?php endif; ?></td>
+          <td class="text-end"><?= money($cf['due']) ?></td><td><?= status_badge($s['status']) ?><?php if ($s['director_id']): ?><div class="small text-muted">via <?= e($s['director_name']) ?></div><?php endif; ?></td></tr><?php endforeach; ?>
         <?php if (!$sales) echo empty_row(7, 'No share purchases.'); ?></tbody></table></div></div></div>
 
       <div class="tab-pane fade" id="t-inv"><div class="card"><div class="table-responsive"><table class="table">

@@ -30,6 +30,11 @@
         <?= form_input('sale_date', 'Sale date', $rec, ['type' => 'date', 'required' => true, 'col' => 'col-12']) ?>
         <?= form_select('status', 'Status', ['confirmed' => 'Confirmed (create invoice)', 'reserved' => 'Reserved (hold shares)'], $rec, ['col' => 'col-12']) ?>
         <?= form_select('sales_person_id', 'Sales person', $users, $rec, ['empty' => '—', 'col' => 'col-12']) ?>
+        <?= form_select('director_id', 'Referred by director', $directors, $rec, ['empty' => '— none (direct sale) —', 'col' => 'col-12', 'help' => 'Only when a director sells this share to their own customer. A director buying for themselves is a direct sale.']) ?>
+        <div class="col-12" data-show-when="director_id">
+          <?= form_input('customer_unit_price', 'Customer price (per unit)', $rec, ['type' => 'money', 'col' => 'w-100', 'help' => 'The price the director sold each package/share at. Office copy & accounts keep the package price; the customer copy shows this price.']) ?>
+          <div class="small mt-1">Customer pays <strong id="calc-cust-total">—</strong> · Director profit <strong class="text-success" id="calc-profit">—</strong></div>
+        </div>
         <?= form_textarea('notes', 'Notes', $rec, ['rows' => 3]) ?>
       </div></div></div>
     </div>

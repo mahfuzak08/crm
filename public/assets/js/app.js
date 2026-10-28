@@ -191,6 +191,21 @@
     });
   });
 
+  /* ---------- show a block only while a field has a value: data-show-when="name=value" ("name" alone = any value) ---------- */
+  document.querySelectorAll('[data-show-when]').forEach(el => {
+    const [name, want] = el.dataset.showWhen.split('=');
+    const form = el.closest('form');
+    const box = el.matches('select, input, textarea') ? el.closest('[class*="col"]') || el : el;
+    const sync = () => {
+      const fields = form.querySelectorAll(`[name="${name}"]`);
+      let val = '';
+      fields.forEach(f => { if ((f.type !== 'radio' && f.type !== 'checkbox') || f.checked) val = f.value; });
+      box.classList.toggle('d-none', want === undefined ? val === '' : val !== want);
+    };
+    form.addEventListener('change', sync);
+    sync();
+  });
+
   /* ---------- share sale / offer calculator ---------- */
   const calcForm = $('[data-share-calc]');
   if (calcForm) {
@@ -234,6 +249,11 @@
       const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
       set('#calc-shares', shares); set('#calc-subtotal', money(sub)); set('#calc-total', money(total));
       const paid = f('initial_payment'); if (paid) set('#calc-due', money(total - cents(paid.value)));
+      const custUnit = f('customer_unit_price');
+      if (custUnit && custUnit.value) {
+        const profit = (cents(custUnit.value) - unit) * q;
+        set('#calc-cust-total', money(total + profit)); set('#calc-profit', money(profit));
+      }
       const warn = $('#calc-warning');
       if (warn) warn.classList.toggle('d-none', !(proj && shares > proj.available));
     }
