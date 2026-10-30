@@ -73,7 +73,7 @@ final class AuthService
         $_SESSION['uid'] = (int) $user['id'];
         $_SESSION['cid'] = (int) $user['company_id'];
         $_SESSION['sv'] = (int) $user['session_version'];
-        $_SESSION['ua'] = hash('sha256', Request::userAgent());
+        $_SESSION['ua'] = Session::uaFingerprint();
         $_SESSION['last_activity'] = time();
         unset($_SESSION['_csrf']);
 
@@ -146,7 +146,7 @@ final class AuthService
              WHERE u.id = ? AND u.deleted_at IS NULL AND u.status = 'active' AND c.status = 'active' AND c.deleted_at IS NULL",
             [$uid]
         );
-        $uaOk = hash_equals((string) ($_SESSION['ua'] ?? ''), hash('sha256', Request::userAgent()));
+        $uaOk = hash_equals((string) ($_SESSION['ua'] ?? ''), Session::uaFingerprint());
         if (!$user || (int) $user['session_version'] !== (int) ($_SESSION['sv'] ?? 0) || !$uaOk) {
             // deactivated, password changed elsewhere, or hijack attempt
             if (!$uaOk) {

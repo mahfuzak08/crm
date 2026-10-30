@@ -24,7 +24,7 @@ final class InstallService
         foreach ($ext as $e) {
             $checks[] = ['Extension: ' . $e, extension_loaded($e), true];
         }
-        foreach (['storage', 'storage/logs', 'storage/private', 'storage/backups'] as $d) {
+        foreach (['storage', 'storage/logs', 'storage/private', 'storage/backups', 'storage/sessions'] as $d) {
             $checks[] = ['Writable: ' . $d, is_writable(BASE_PATH . '/' . $d), true];
         }
         $checks[] = ['Project root writable for .env (otherwise create it manually)', is_writable(BASE_PATH) || is_file(BASE_PATH . '/.env'), false];

@@ -25,8 +25,11 @@ return [
 
     'session' => [
         'name'             => Env::get('SESSION_NAME', 'lakecrm'),
-        'idle_timeout'     => (int) Env::get('SESSION_IDLE_MINUTES', '30') * 60,
+        'idle_timeout'     => (int) Env::get('SESSION_IDLE_MINUTES', '120') * 60,
         'absolute_timeout' => (int) Env::get('SESSION_MAX_HOURS', '12') * 3600,
+        // Android app (User-Agent contains "LakeviewApp/"): stays signed in, sliding window.
+        'app_idle_timeout'     => (int) Env::get('SESSION_APP_IDLE_DAYS', '30') * 86400,
+        'app_absolute_timeout' => (int) Env::get('SESSION_APP_MAX_DAYS', '365') * 86400,
     ],
 
     'auth' => [

@@ -2,6 +2,7 @@
 /storage/logs/*
 /storage/private/*
 /storage/backups/*
+/storage/sessions/*
 /storage/installed.lock
 !/storage/**/.gitkeep
 !/storage/.htaccess

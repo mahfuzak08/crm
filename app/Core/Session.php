@@ -19,11 +19,24 @@ final class Session
             ini_set('session.sid_length', '48');
             ini_set('session.sid_bits_per_character', '6');
         }
-        ini_set('session.gc_maxlifetime', (string) max(1800, (int) config('session.idle_timeout')));
+        // Own save path: shared hosts' cron purges the default one after ~24 min,
+        // whatever gc_maxlifetime we ask for.
+        $dir = BASE_PATH . '/storage/sessions';
+        if (is_dir($dir) || @mkdir($dir, 0700, true)) {
+            session_save_path($dir);
+            ini_set('session.gc_probability', '1');
+            ini_set('session.gc_divisor', '100');
+        }
+        $app = self::isApp();
+        $idle = $app ? (int) config('session.app_idle_timeout', 2592000) : (int) config('session.idle_timeout', 7200);
+        $abs  = $app ? (int) config('session.app_absolute_timeout', 31536000) : (int) config('session.absolute_timeout', 43200);
+        // GC is shared by web and app sessions, so keep files as long as the longest window.
+        ini_set('session.gc_maxlifetime', (string) max(1800, $idle, (int) config('session.app_idle_timeout', 2592000)));
 
         session_name((string) config('session.name', 'lakecrm'));
         session_set_cookie_params([
-            'lifetime' => 0,
+            // App: persistent cookie so WebView keeps it across restarts. Browser: until closed.
+            'lifetime' => $app ? $idle : 0,
             'path'     => base_path_prefix() . '/',
             'secure'   => Request::isHttps(),
             'httponly' => true,
@@ -34,8 +47,6 @@ final class Session
         // Idle + absolute timeout for authenticated sessions.
         $now = time();
         if (isset($_SESSION['uid'])) {
-            $idle = (int) config('session.idle_timeout', 1800);
-            $abs  = (int) config('session.absolute_timeout', 43200);
             if (($now - (int) ($_SESSION['last_activity'] ?? $now)) > $idle || ($now - (int) ($_SESSION['created'] ?? $now)) > $abs) {
                 self::destroy();
                 session_start();
@@ -45,9 +56,30 @@ final class Session
         $_SESSION['last_activity'] = $now;
         $_SESSION['created'] ??= $now;
 
+        // PHP never extends a cookie's expiry by itself; slide it forward on each app request.
+        if ($app && isset($_COOKIE[session_name()])) {
+            $p = session_get_cookie_params();
+            setcookie(session_name(), session_id(), [
+                'expires' => $now + $idle, 'path' => $p['path'], 'secure' => $p['secure'],
+                'httponly' => true, 'samesite' => $p['samesite'] ?: 'Lax',
+            ]);
+        }
+
         // Rotate flash: data set during previous request is available now, then removed.
         $_SESSION['_flash_now'] = $_SESSION['_flash_next'] ?? [];
         unset($_SESSION['_flash_next']);
+    }
+
+    /** Request comes from the Lakeview Android app (its WebView appends "LakeviewApp/<version>"). */
+    public static function isApp(): bool
+    {
+        return str_contains((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 'LakeviewApp/');
+    }
+
+    /** User-Agent hash without version numbers, so browser/WebView/app updates don't sign users out. */
+    public static function uaFingerprint(): string
+    {
+        return hash('sha256', (string) preg_replace('/\d+(?:[._]\d+)*/', '', Request::userAgent()));
     }
 
     /** New session ID, keeping data. Call on login / privilege change. */
